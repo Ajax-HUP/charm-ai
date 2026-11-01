@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sparkles, MessageCircle, WandSparkles, ScanSearch, GraduationCap,
   UserRound, Menu, X, Copy, RefreshCw, ArrowUpRight, Heart,
@@ -69,6 +69,7 @@ function Logo({ small = false }) {
 }
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState("home");
   const [style, setStyle] = useState("Smooth");
   const [context, setContext] = useState("");
@@ -80,6 +81,11 @@ function App() {
   const [analysis, setAnalysis] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [saved, setSaved] = useState([]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsLoading(false), 5200);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const current = navItems.find(n => n.id === page);
   const lessons = [
@@ -133,6 +139,17 @@ function App() {
   const renderAcademy = () => <div className="page-content"><PageTitle eyebrow="CHARM ACADEMY / 04" title={<>The best charm<br/><span className="gradient-text">is the real you.</span></>} subtitle="Small lessons. Better conversations. Stronger confidence."/><div className="academy-banner"><div className="academy-symbol"><GraduationCap size={36}/></div><div><div className="eyebrow light">YOUR LEARNING PATH</div><h2>Connection starts with curiosity.</h2><p>{completed.length} of {lessons.length} lessons completed</p><div className="progress-track"><span style={{width:(completed.length/lessons.length*100)+"%"}}/></div></div></div><div className="lesson-list">{lessons.map((l,i)=><div className="lesson-row" key={l.title}><div className="lesson-num">{completed.includes(i)?<Check size={18}/>:String(i+1).padStart(2,"0")}</div><div className="lesson-info"><span className="eyebrow">{l.tag} · {l.time}</span><h3>{l.title}</h3></div><button className={completed.includes(i)?"complete-btn done":"complete-btn"} onClick={()=>setCompleted(prev=>prev.includes(i)?prev.filter(x=>x!==i):[...prev,i])}>{completed.includes(i)?"Completed":"Mark done"} <ChevronRight size={16}/></button></div>)}</div><div className="respect-note"><ShieldCheck/><p><strong>Charm with respect.</strong> Confidence is never pressure. A good connection makes room for both people to be comfortable, honest and heard.</p></div></div>;
 
   const renderProfile = () => <div className="page-content"><PageTitle eyebrow="YOUR SPACE / 05" title={<>Make it<br/><span className="gradient-text">feel like yours.</span></>} subtitle="A few settings for your CHARM AI experience."/><div className="profile-card"><div className="avatar"><UserRound size={32}/></div><div><h2>{name||"Your name"}</h2><p>CHARM AI member · Demo profile</p></div><span className="profile-spark"><Sparkles/></span></div><div className="panel settings-panel"><div className="panel-label">PERSONAL DETAILS</div><label htmlFor="displayname">Display name</label><input id="displayname" value={name} onChange={e=>setName(e.target.value)} placeholder="Enter your name"/><div className="settings-divider"/><div className="settings-line"><div><strong>Saved replies</strong><p>{saved.length} saved in this session</p></div><Bookmark size={18}/></div><div className="settings-line"><div><strong>Learning progress</strong><p>{completed.length} lessons completed</p></div><GraduationCap size={18}/></div></div><div className="respect-note"><ShieldCheck/><p><strong>Your privacy matters.</strong> This demo stores interaction state only in the current app session. Don't paste sensitive personal information.</p></div></div>;
+
+  if (isLoading) return <div className="splash-screen" role="status" aria-label="Loading CHARM AI">
+    <div className="splash-noise" />
+    <div className="splash-orbit splash-orbit-one" /><div className="splash-orbit splash-orbit-two" />
+    <div className="splash-logo"><span>C</span><i>✦</i></div>
+    <div className="splash-brand">CHARM<span> AI</span></div>
+    <div className="splash-tagline">YOUR AI WINGMAN</div>
+    <div className="splash-loader"><span /></div>
+    <div className="splash-status">PREPARING YOUR NEXT GREAT CONVERSATION</div>
+    <div className="splash-foot">CONFIDENCE. CONNECTION. YOUR STYLE.</div>
+  </div>;
 
   return <div className="app-shell">
     <aside className={mobileMenu?"sidebar open":"sidebar"}><div className="sidebar-brand"><Logo/><div><strong>CHARM<span> AI</span></strong><small>YOUR AI WINGMAN</small></div><button className="close-menu" onClick={()=>setMobileMenu(false)}><X/></button></div><div className="nav-caption">WORKSPACE</div><nav>{navItems.map(item=>{const Icon=item.icon;return <button key={item.id} className={page===item.id?"nav-link active":"nav-link"} onClick={()=>go(item.id)}><Icon size={19}/><span>{item.label}</span>{page===item.id&&<span className="nav-active-dot"/>}</button>;})}</nav><div className="sidebar-bottom"><div className="sidebar-tip"><div className="tip-icon"><Heart size={16}/></div><strong>Keep it genuine.</strong><p>The right words start with good intentions.</p></div><button className="user-mini" onClick={()=>go("profile")}><div className="mini-avatar">{(name||"A").charAt(0).toUpperCase()}</div><div><strong>{name||"Your profile"}</strong><small>Free demo plan</small></div><Settings size={16}/></button></div></aside>
