@@ -107,9 +107,15 @@ function App() {
   };
   const generate = async () => {
     setAiLoading(true); setAiError(""); setReplies([]); setCopied(-1);
-    try { const data = await callCharmAI({ action: "generate", context, style }); if (!data.replies || !data.replies.length) throw new Error("No reply ideas returned."); setReplies(data.replies); }
-    catch (error) { setAiError(error.message || "Could not connect to CharmAI."); }
-    finally { setAiLoading(false); }
+    try {
+      const data = await callCharmAI({ action: "generate", context, style });
+      if (!data.replies || !data.replies.length) throw new Error("No reply ideas returned.");
+      setReplies(data.replies);
+    } catch {
+      const base = examples[style] || examples.Smooth;
+      setReplies(context.trim() ? [base[0], base[1] + " Tell me more 👀", base[2]] : base);
+      setAiError("Free offline mode: these ideas are made on your device. Live AI needs a connected provider.");
+    } finally { setAiLoading(false); }
   };
   const runAnalysis = async () => {
     setAiLoading(true); setAiError(""); setAnalysis(false); setAnalysisResult("");
@@ -117,12 +123,11 @@ function App() {
       const data = await callCharmAI({ action: "analyse", context: analysisText, style });
       setAnalysisResult(data.note || "Ask a clear and respectful question rather than assuming.");
     } catch {
-      const count = analysisText.split("\n").filter(Boolean).length;
+      const count = analysisText.split("\\n").filter(Boolean).length;
       setAnalysisResult("This chat contains " + count + " message lines. Look for balanced effort, open questions and mutual interest. Text alone cannot reveal someone's feelings. Try a friendly question that invites an honest answer.");
       setAiError("Free offline reflection: this is a basic guide, not a live AI analysis.");
-    }
+    } finally { setAiLoading(false); }
     setAnalysis(true);
-    finally { setAiLoading(false); }
   };
   const copyReply = async (reply, i) => {
     try { await navigator.clipboard.writeText(reply); setCopied(i); }
