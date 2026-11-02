@@ -79,6 +79,9 @@ function App() {
   const [name, setName] = useState("Alex");
   const [analysisText, setAnalysisText] = useState("");
   const [analysis, setAnalysis] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [completed, setCompleted] = useState([]);
   const [saved, setSaved] = useState([]);
 
@@ -95,7 +98,25 @@ function App() {
     { title: "Respecting boundaries and reading the room", time: "6 min", tag: "Respect" }
   ];
 
-  const generate = () => { setReplies(makeReplies(context, style)); setCopied(-1); };
+  const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+  const callCharmAI = async (payload) => {
+    const response = await fetch(apiBase + "/api/charm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "CHARM AI could not respond. Please try again.");
+    return data;
+  };
+  const generate = async () => {
+    setAiLoading(true); setAiError(""); setReplies([]); setCopied(-1);
+    try { const data = await callCharmAI({ action: "generate", context, style }); if (!data.replies || !data.replies.length) throw new Error("No reply ideas returned."); setReplies(data.replies); }
+    catch (error) { setAiError(error.message || "Could not connect to CHARM AI."); }
+    finally { setAiLoading(false); }
+  };
+  const runAnalysis = async () => {
+    setAiLoading(true); setAiError(""); setAnalysis(false); setAnalysisResult("");
+    try { const data = await callCharmAI({ action: "analyse", context: analysisText, style }); setAnalysisResult(data.note || "Ask a clear and respectful question rather than assuming."); setAnalysis(true); }
+    catch (error) { setAiError(error.message || "Could not analyse this conversation."); }
+    finally { setAiLoading(false); }
+  };
   const copyReply = async (reply, i) => {
     try { await navigator.clipboard.writeText(reply); setCopied(i); }
     catch { setCopied(-1); }
