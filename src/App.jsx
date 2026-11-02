@@ -123,7 +123,7 @@ function App() {
       const data = await callCharmAI({ action: "analyse", context: analysisText, style });
       setAnalysisResult(data.note || "Ask a clear and respectful question rather than assuming.");
     } catch {
-      const count = analysisText.split("\\n").filter(Boolean).length;
+      const count = analysisText.split("\n").filter(Boolean).length;
       setAnalysisResult("This chat contains " + count + " message lines. Look for balanced effort, open questions and mutual interest. Text alone cannot reveal someone's feelings. Try a friendly question that invites an honest answer.");
       setAiError("Free offline reflection: this is a basic guide, not a live AI analysis.");
     } finally { setAiLoading(false); }
