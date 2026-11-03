@@ -12,6 +12,9 @@ export default function AuthGate() {
   const [mode, setMode] = useState("choices");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -47,6 +50,7 @@ export default function AuthGate() {
   const emailAuth = async (event) => {
     event.preventDefault();
     setBusy(true); setError(""); setMessage("");
+    if ((mode === "signup" || recoveryMode) && password !== confirmPassword) { setError("Your passwords do not match."); setBusy(false); return; }
     try {
       const cleanEmail = email.trim().toLowerCase();
       const result = mode === "signup"
@@ -88,10 +92,11 @@ export default function AuthGate() {
 
   const saveNewPassword = async (event) => {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
+    if (password !== confirmPassword) { setError("Your passwords do not match."); setBusy(false); return; }
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) setError(updateError.message);
-      else { setRecoveryMode(false); setPassword(""); setMessage("Password updated successfully."); }
+      else { setRecoveryMode(false); setPassword(""); setConfirmPassword(""); setMessage("Password updated successfully."); }
     } catch { setError("Could not update your password. Open the latest reset link and try again."); }
     finally { setBusy(false); }
   };
@@ -123,6 +128,9 @@ export default function AuthGate() {
 
   if (session && !recoveryMode) return <App authUser={session.user} onSignOut={signOut} />;
 
+  const passwordField = {position:"relative",display:"flex",alignItems:"center"};
+  const eyeButton = {position:"absolute",right:12,top:16,width:36,height:36,display:"grid",placeItems:"center",border:0,background:"transparent",color:"#bda9dc",cursor:"pointer",padding:0};
+  const eyeIcon = (visible) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{visible&&<path d="M3 3l18 18"/>}</svg>;
   const styles = { page:{minHeight:"100svh",display:"grid",placeItems:"center",padding:"28px 18px",background:"radial-gradient(ellipse at 50% 0%,#39205f 0%,#1d1235 38%,#100b20 78%)",color:"#f8f5ff",fontFamily:"inherit"}, card:{width:"min(100%,440px)",padding:"32px 25px",border:"1px solid #ffffff1c",borderRadius:24,background:"linear-gradient(145deg,#211832,#171124)",boxShadow:"0 24px 90px #0006"}, button:{width:"100%",padding:"14px 16px",borderRadius:12,border:"1px solid #ffffff24",background:"#ffffff0b",color:"#fff",fontWeight:700,fontSize:14,marginTop:12,display:"flex",alignItems:"center",justifyContent:"center",gap:10}, input:{width:"100%",padding:"14px",borderRadius:10,border:"1px solid #ffffff24",background:"#100b20",color:"#fff",fontSize:14,marginTop:8,outline:"none"}, link:{border:0,background:"none",color:"#d2b6ff",fontWeight:700,padding:"10px 4px",cursor:"pointer"}, primary:{width:"100%",padding:"14px",border:0,borderRadius:12,background:"linear-gradient(100deg,#8955f5,#c34be2 65%,#f04aa9)",color:"#fff",fontWeight:800,fontSize:14,marginTop:18}};
   return <div style={styles.page}><div style={styles.card}>
     <div style={{textAlign:"center",marginBottom:28}}>
@@ -132,7 +140,7 @@ export default function AuthGate() {
       <h1 style={{fontSize:25,margin:"28px 0 8px"}}>{mode==="choices"?"Welcome to your new favourite wingman.":mode==="signup"?"Create your account.":"Welcome back."}</h1>
       <p style={{fontSize:13,lineHeight:1.6,color:"#b6a9ca",margin:0}}>{mode==="choices"?"Sign in to save your CharmAI experience and pick up where you left off.":"Your next great conversation starts here."}</p>
     </div>
-    {recoveryMode ? <form onSubmit={saveNewPassword}><label style={{display:"block",fontSize:12,fontWeight:700,marginTop:15}}>New password</label><input style={styles.input} type="password" minLength={6} required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters"/><button style={styles.primary} disabled={busy}>{busy?"Saving...":"Update password"}</button>{message&&<p role="status" style={{color:"#9be8c1",fontSize:12}}>{message}</p>}{error&&<p role="alert" style={{color:"#ffb2c2",fontSize:12}}>{error}</p>}</form> : !supabase ? <div style={{padding:15,borderRadius:12,background:"#ffb84d12",border:"1px solid #ffb84d55",color:"#ffd59b",fontSize:13,lineHeight:1.6}}>Authentication setup is not finished yet. Add <b>VITE_SUPABASE_URL</b> and <b>VITE_SUPABASE_ANON_KEY</b> to the Vercel project, then redeploy. Your sign-in screen is ready, but sign-in cannot work until this is connected.</div> : <>
+    {recoveryMode ? <form onSubmit={saveNewPassword}><label style={{display:"block",fontSize:12,fontWeight:700,marginTop:15}}>New password</label><div style={passwordField}><input style={{...styles.input,paddingRight:52}} type={showPassword?"text":"password"} minLength={6} required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters"/><button type="button" style={eyeButton} onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{eyeIcon(showPassword)}</button></div><label style={{display:"block",fontSize:12,fontWeight:700,marginTop:16}}>Confirm new password</label><div style={passwordField}><input style={{...styles.input,paddingRight:52}} type={showConfirmPassword?"text":"password"} minLength={6} required value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Re-enter password"/><button type="button" style={eyeButton} onClick={()=>setShowConfirmPassword(v=>!v)} aria-label={showConfirmPassword?"Hide confirmation password":"Show confirmation password"}>{eyeIcon(showConfirmPassword)}</button></div><button style={styles.primary} disabled={busy}>{busy?"Saving...":"Update password"}</button>{message&&<p role="status" style={{color:"#9be8c1",fontSize:12}}>{message}</p>}{error&&<p role="alert" style={{color:"#ffb2c2",fontSize:12}}>{error}</p>}</form> : !supabase ? <div style={{padding:15,borderRadius:12,background:"#ffb84d12",border:"1px solid #ffb84d55",color:"#ffd59b",fontSize:13,lineHeight:1.6}}>Authentication setup is not finished yet. Add <b>VITE_SUPABASE_URL</b> and <b>VITE_SUPABASE_ANON_KEY</b> to the Vercel project, then redeploy. Your sign-in screen is ready, but sign-in cannot work until this is connected.</div> : <>
       {mode==="choices" ? <>
         <button style={{...styles.button,background:"#fff",color:"#241b30",border:0}} onClick={googleSignIn} disabled={busy}><span style={{fontWeight:900,fontSize:17}}>G</span>{busy?"Connecting...":"Continue with Google"}</button>
         <button style={styles.button} onClick={()=>{setMode("login");setError("");}}>✉ Continue with Email</button>
@@ -141,11 +149,12 @@ export default function AuthGate() {
         <label style={{display:"block",fontSize:12,fontWeight:700,marginTop:15}}>Email address</label>
         <input style={styles.input} type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>
         <label style={{display:"block",fontSize:12,fontWeight:700,marginTop:16}}>Password</label>
-        <input style={styles.input} type="password" autoComplete={mode==="signup"?"new-password":"current-password"} minLength={6} required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters"/>
+        <div style={passwordField}><input style={{...styles.input,paddingRight:52}} type={showPassword?"text":"password"} autoComplete={mode==="signup"?"new-password":"current-password"} minLength={6} required value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters"/><button type="button" style={eyeButton} onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?"Hide password":"Show password"}>{eyeIcon(showPassword)}</button></div>
+        {mode==="signup"&&<><label style={{display:"block",fontSize:12,fontWeight:700,marginTop:16}}>Confirm password</label><div style={passwordField}><input style={{...styles.input,paddingRight:52}} type={showConfirmPassword?"text":"password"} autoComplete="new-password" minLength={6} required value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Re-enter your password"/><button type="button" style={eyeButton} onClick={()=>setShowConfirmPassword(v=>!v)} aria-label={showConfirmPassword?"Hide confirmation password":"Show confirmation password"}>{eyeIcon(showConfirmPassword)}</button></div></>}
         <button style={styles.primary} disabled={busy}>{busy?"Please wait...":mode==="signup"?"Create account":"Sign in"}</button>
         {mode==="login"&&<button type="button" style={{...styles.link,display:"block",margin:"8px auto"}} onClick={sendPasswordReset} disabled={busy}>Forgot password? Send reset link</button>}
         <button type="button" style={{...styles.button,marginTop:10}} onClick={()=>{setMode("choices");setError("");}}>Back to sign-in options</button>
-        <p style={{textAlign:"center",fontSize:12,color:"#b6a9ca"}}>{mode==="signup"?"Already have an account?":"New to CharmAI?"} <button type="button" style={styles.link} onClick={()=>{setMode(mode==="signup"?"login":"signup");setError("");setMessage("");}}>{mode==="signup"?"Sign in":"Create account"}</button></p>
+        <p style={{textAlign:"center",fontSize:12,color:"#b6a9ca"}}>{mode==="signup"?"Already have an account?":"New to CharmAI?"} <button type="button" style={styles.link} onClick={()=>{setMode(mode==="signup"?"login":"signup");setError("");setMessage("");setConfirmPassword("");setShowPassword(false);setShowConfirmPassword(false);}}>{mode==="signup"?"Sign in":"Create account"}</button></p>
       </form>}
       {message&&<p role="status" style={{color:"#9be8c1",fontSize:12,lineHeight:1.5}}>{message}</p>}
       {confirmationPending&&<button type="button" style={styles.button} onClick={resendConfirmation} disabled={busy}>{busy?"Sending...":"Resend confirmation email"}</button>}
