@@ -40,18 +40,58 @@ export default function AuthGate() {
     if (authError) { setError(authError.message); setBusy(false); }
   };
 
+  const [confirmationPending, setConfirmationPending] = useState(false);
+
   const emailAuth = async (event) => {
     event.preventDefault();
     setBusy(true); setError(""); setMessage("");
-    const result = mode === "signup"
-      ? await supabase.auth.signUp({ email: email.trim(), password })
-      : await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setBusy(false);
-    if (result.error) { setError(result.error.message); return; }
-    if (mode === "signup" && !result.data.session) {
-      setMessage("Account created. Check your email for the confirmation link, then come back and sign in.");
-      setMode("login");
-    } else if (result.data.session) setMessage("You're signed in. Welcome to CharmAI.");
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const result = mode === "signup"
+        ? await supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: { emailRedirectTo: window.location.origin }
+          })
+        : await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      if (mode === "signup" && !result.data.session) {
+        setConfirmationPending(true);
+        setMessage("Your account request was received. Check your inbox and Spam folder for the confirmation email. After confirming, return here and sign in.");
+        setMode("login");
+      } else if (result.data.session) {
+        setConfirmationPending(false);
+        setMessage("You're signed in. Welcome to CharmAI.");
+      }
+    } catch (err) {
+      setError("Connection problem. Check your internet and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendConfirmation = async () => {
+    if (!supabase || !email.trim()) {
+      setError("Enter your email address first.");
+      return;
+    }
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: window.location.origin }
+      });
+      if (resendError) setError(resendError.message);
+      else setMessage("If this account still needs confirmation, a new email has been requested. Check Inbox, Spam and Promotions.");
+    } catch (err) {
+      setError("Could not request another email. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); };
@@ -84,6 +124,7 @@ export default function AuthGate() {
         <p style={{textAlign:"center",fontSize:12,color:"#b6a9ca"}}>{mode==="signup"?"Already have an account?":"New to CharmAI?"} <button type="button" style={styles.link} onClick={()=>{setMode(mode==="signup"?"login":"signup");setError("");setMessage("");}}>{mode==="signup"?"Sign in":"Create account"}</button></p>
       </form>}
       {message&&<p role="status" style={{color:"#9be8c1",fontSize:12,lineHeight:1.5}}>{message}</p>}
+      {confirmationPending&&<button type="button" style={styles.button} onClick={resendConfirmation} disabled={busy}>{busy?"Sending...":"Resend confirmation email"}</button>}
       {error&&<p role="alert" style={{color:"#ffb2c2",fontSize:12,lineHeight:1.5}}>{error}</p>}
     </>}
     <div style={{textAlign:"center",marginTop:25,color:"#756987",fontSize:10,letterSpacing:1}}>CONFIDENCE · CONNECTION · YOUR STYLE</div>
